@@ -73,6 +73,7 @@ namespace LikeABrawler2
             return Players[idx];
         }
 
+
         //TODO: Make these linear time with UID dicts for better performance when u work on co-op
         public static BrawlerPlayer GetPlayerByUID(uint uid)
         {
@@ -82,6 +83,11 @@ namespace LikeABrawler2
         public static BrawlerPlayer GetPlayerByPartyIndex(uint id)
         {
             return Players.FirstOrDefault(x => x.PartyMemberIndex == id);
+        }
+
+        public static bool IsBrawlerPlayer(Fighter fighter)
+        {
+            return Mod.GetPlayerByUID(fighter.Character.UID) != null;
         }
 
         public static void RegisterPlayer(EntityHandle<Character> player, uint nakamaIndex)
@@ -191,17 +197,20 @@ namespace LikeABrawler2
             IsGameFocused = ApplicationIsActivated();
             IsGamePaused = GameVarManager.GetValueBool(GameVarID.is_pause);
 
-            for (uint i = 0; i <= COOP_PLAYER_COUNT; i++)
+#warning TODO: Figure this character swapping jank out
+            if(!BrawlerBattleManager.Battling)
             {
-                EntityHandle<Character> partyMember = NakamaManager.GetCharacterHandle(i);
-
-                if (partyMember.IsValid())
+                for (uint i = 0; i <= COOP_PLAYER_COUNT; i++)
                 {
-                    if (GetPlayerByPartyIndex(i) == null)
-                        RegisterPlayer(partyMember, i);
+                    EntityHandle<Character> partyMember = NakamaManager.GetCharacterHandle(i);
+
+                    if (partyMember.IsValid())
+                    {
+                        if (GetPlayerByPartyIndex(i) == null)
+                            RegisterPlayer(partyMember, i);
+                    }
                 }
             }
-
 #if DEBUG
             Debug.GameUpdate();
 #endif
@@ -209,10 +218,12 @@ namespace LikeABrawler2
             BrawlerBattleManager.Update();
 
 
-            Players = Players.Where(x => x.CharacterHandle.IsValid()).ToList();
+           var Players2 = Players.Where(x => x.CharacterHandle.IsValid()).ToList();
 
-            foreach (var brawlerPlayer in Players)
-                brawlerPlayer.Update();
+            foreach (var brawlerPlayer in Players2)
+               brawlerPlayer.Update();
+
+            Players = Players2;
         }
 
         public static YFC ReadYFC(string name)

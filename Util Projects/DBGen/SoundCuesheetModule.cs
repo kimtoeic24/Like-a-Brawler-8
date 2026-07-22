@@ -40,10 +40,6 @@ namespace DBGen
 
         public static void Procedure()
         {
-            //libarmp error
-            if (Debugger.IsAttached)
-                return;
-
             Console.WriteLine("------|CUESHEET GEN|-----");
 
             DirectoryInfo genDirInf = new DirectoryInfo(genDir);
@@ -137,19 +133,10 @@ namespace DBGen
             Result = soundCuesheetInfo;
             ArmpFileWriter.WriteARMPToFile(soundCuesheetInfo, Path.Combine(Program.dbPath, "sound_cuesheet_info.bin"));
 
-
-            string tempCuesheetMapPath = Path.Combine(Program.dbPath, "sound_cuesheet_info.db_index");
-
-            //Until ret fixes the ingame sound_cuesheet_info reading bug, this is a workaround
-            if (!File.Exists(tempCuesheetMapPath))
-                File.Create(tempCuesheetMapPath).Close();
-
             Dictionary<uint, string> map = new Dictionary<uint, string>();
 
             foreach (ArmpEntry entry in soundCuesheetInfo.GetMainTable().Indexer.GetAllEntries())
                 map.Add((uint)entry.GetValueFromColumn("0"), entry.Name);
-
-            File.WriteAllLines(tempCuesheetMapPath, map.Select(x => x.Key.ToString() + " " + x.Value.ToString()));
 
             Console.WriteLine("------|CUESHEET GEN COMPLETE|-----");
         }

@@ -14,6 +14,14 @@ namespace DBGen
         //adjust references
         public static bool ComplexMode = true;
 
+        public static bool AdjustPibs = true;
+
+        private static Dictionary<string, ushort> m_cueIDMap = new Dictionary<string, ushort>();
+        private static Dictionary<string, int> m_hactTypeMap = new Dictionary<string, int>();
+
+
+        private static ARMP particlePUID;
+
         public static void Procedure()
         {
 
@@ -29,7 +37,7 @@ namespace DBGen
             Console.WriteLine("------|TALK PARAM GEN|-----");
 
             string genFilePath = "hact_yazawa/hact_gen.txt";
-
+    
             if (File.Exists(genFilePath))
                 isRepackGame = true;
 
@@ -57,7 +65,15 @@ namespace DBGen
                 if (!File.Exists(genFilePath))
                     File.Create(genFilePath).Close();
 
-                genFileDat = File.ReadAllLines(genFilePath).ToList();
+                
+                foreach(string str in File.ReadAllLines(genFilePath))
+                {
+                    string[] split = str.Split('|');
+                    string hactName = split[0];
+                    int hactType = int.Parse(split[1]);
+
+                    m_hactTypeMap[hactName] = hactType;
+                }
             }
 
             foreach (string hactDir in Directory.GetDirectories(hactSrcDir))
@@ -75,21 +91,18 @@ namespace DBGen
                     {
                     }
 
-                    if (genFileDat.Contains(dirName))
+                    if (m_hactTypeMap.ContainsKey(dirName))
                         continue;
                     else
                     {
-                        string metadatPath = Path.Combine(hactDir, "metadata.txt");
+                        if (!m_hactTypeMap.ContainsKey(dirName))
+                            m_hactTypeMap[dirName] = 9;
 
-                        if (!File.Exists(metadatPath))
-                            File.WriteAllText(metadatPath, "9"); //type
-
-                        genFileDat.Add(dirName);
                         Console.WriteLine("Added " + hactDir);
                     }
 
 
-                    File.WriteAllLines(genFilePath, genFileDat.ToArray());
+                    File.WriteAllLines(genFilePath, m_hactTypeMap.Select(x => x.Key + "|" + x.Value.ToString()));
                 }
             }
 
@@ -106,11 +119,11 @@ namespace DBGen
             if (Directory.Exists("auth"))
                 auths = Directory.GetDirectories("auth");
 
-            foreach (string str in genFileDat)
-            {
-                string hactDir = null;
-                string metaDataPath = null;
 
+            foreach(var kv in m_hactTypeMap)
+            {
+                string str = kv.Key;
+                string hactDir = null;
 
                 hactDir = Path.Combine(hactSrcDir, str);
 
@@ -125,7 +138,6 @@ namespace DBGen
                     catch
                     {
                     }
-                    metaDataPath = Path.Combine(hactDir, "metadata.txt");
                 }
 
                 string cmnPath = Path.Combine(hactDir, "cmn", "cmn.bin");
@@ -146,7 +158,7 @@ namespace DBGen
                             path += "/";
 
                             talkEntry.SetValueFromColumn("path", path + str);
-                            talkEntry.SetValueFromColumn("type", byte.Parse(File.ReadAllText(metaDataPath)));
+                            talkEntry.SetValueFromColumn("type", (byte)kv.Value);
                         }
                         catch
                         {
@@ -159,15 +171,15 @@ namespace DBGen
 
                 bool dirty = false;
 
-                if(ComplexMode)
+                if (ComplexMode)
                     AdjustHAct(cmnPath, str);
 
-                if(dirty)
+                if (dirty)
                 {
 
                 }
-            }
 
+            }
             foreach(string str in auths)
             {
                 string cmnPath = Path.Combine(str, "cmn", "cmn.bin");
@@ -179,7 +191,6 @@ namespace DBGen
             if (canAdd)
             {
                 ArmpFileWriter.WriteARMPToFile(talkParamBin, Path.Combine(Program.dbPath, "talk_param.bin"));
-                File.WriteAllLines(Path.Combine(Program.dbPath, "talk_param.db_index"), Program.CacheARMP(talkParamBin));
             }
 
             Console.WriteLine("------|TALK PARAM GEN COMPLETE|-----");
@@ -199,8 +210,12 @@ namespace DBGen
             
             if (AdjustSound(hact, str))
                 dirty = true;
-            if (AdjustPib(hact, str))
-                dirty = true;
+
+            if (AdjustPibs)
+            {
+                if (AdjustPib(hact, str))
+                    dirty = true;
+            }
 
             if(dirty)
             {
@@ -217,20 +232,53 @@ namespace DBGen
 
             string str = name;
 
-            string findName = str.Substring(0, (str.Length >= 8 ? 7 : str.Length));
-            NodeElement[] soundNodes = hact.AllElements.Where(x => x.Name.ToLowerInvariant().Contains(findName)).ToArray();
+            string findName = str.Substring(0, (str.Length >= 11 ? 10 : str.Length));
+            NodeElement[] soundNodes = hact.AllElements.Where(x => x is DEElementSE).ToArray();
 
             ushort newCuesheetID = 0;
 
             if (soundNodes.Length > 0)
             {
-                string nameToFind = str.ToLowerInvariant();
+                foreach (DEElementSE soundNode in soundNodes)
+                {
+                    string nameToFind2 = soundNode.Name;
+                    string nameToFind = "hact_" + soundNode.Name.Replace("hact_", "").ToLowerInvariant();
 
-                if (!nameToFind.StartsWith("hact"))
-                    nameToFind = "hact_" + nameToFind;
+                    if (m_cueIDMap.ContainsKey(nameToFind))
+                    {
+                        soundNode.CueSheet = m_cueIDMap[nameToFind];
+                        continue;
+                    }
 
-                ArmpEntry cuesheetEntry = SoundCuesheetModule.Result.GetMainTable().GetAllEntries().FirstOrDefault(x => x.GetValueFromColumn("name").ToString().Contains(nameToFind));
+                    if (m_cueIDMap.ContainsKey(nameToFind2))
+                    {
+                        soundNode.CueSheet = m_cueIDMap[nameToFind2];
+                        continue;
+                    }
 
+                    ArmpEntry cuesheetEntry = SoundCuesheetModule.Result.GetMainTable().GetAllEntries().FirstOrDefault(x => x.GetValueFromColumn("name").ToString().Contains(nameToFind));
+
+                    if(cuesheetEntry == null)
+                        cuesheetEntry = SoundCuesheetModule.Result.GetMainTable().GetAllEntries().FirstOrDefault(x => x.GetValueFromColumn("name").ToString().Contains(nameToFind2));
+
+                    DEElementSE se = soundNode as DEElementSE;
+
+                    if (cuesheetEntry != null)
+                    {
+                        newCuesheetID = ((ushort)cuesheetEntry.GetValueFromColumn("*cuesheet_id"));
+                        if (se.CueSheet != newCuesheetID)
+                        {
+                            se.CueSheet = newCuesheetID;
+                            dirty = true;
+
+                            Console.WriteLine("Adjusted hact cuesheet ID for " + str);
+                        }
+
+                        m_cueIDMap[findName] = newCuesheetID;
+                    }
+                }
+
+                /*
                 if (cuesheetEntry != null)
                 {
                     newCuesheetID = ((ushort)cuesheetEntry.GetValueFromColumn("*cuesheet_id"));
@@ -250,6 +298,7 @@ namespace DBGen
                     }
                     Console.WriteLine("Adjusted hact cuesheet IDs for " + str);
                 }
+                */
             }
 
             return dirty;
@@ -257,7 +306,8 @@ namespace DBGen
 
         private static bool AdjustPib(CMN hact, string name)
         {
-            ARMP particlePUID = Program.GetOutputPUIDTable("particle");
+            if(particlePUID == null)
+                particlePUID = Program.GetOutputPUIDTable("particle");
 
             if (particlePUID == null)
                 return false;
@@ -267,7 +317,8 @@ namespace DBGen
 
             bool dirty = false;
 
-            foreach(DEElementParticle particle in particleNodes)
+
+            foreach (DEElementParticle particle in particleNodes)
             {
                 string ptcName = "";
 
@@ -278,11 +329,12 @@ namespace DBGen
 
                 uint newID = 0;
 
-                try
+
+                if (ParticleModule.pibMap.ContainsKey(ptcName))
                 {
                     newID = ParticleModule.pibMap[ptcName];
                 }
-                catch
+                else
                 {
                     ArmpEntry foundEntry = null;
                     bool found = particlePUID.GetMainTable().TryGetEntry(ptcName, out foundEntry);

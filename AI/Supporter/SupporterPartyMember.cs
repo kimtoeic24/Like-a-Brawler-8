@@ -64,6 +64,10 @@ namespace LikeABrawler2
                 Flags |= characterFlag;
 
 
+            //Split fight: Don't let the AI controlled player take a turn.
+            if (DragonEngine.GetHumanPlayer().UID == Character.UID)
+                m_nextAttackTime = 999999;
+
             //Don't let em die
             //14.03.2025 Update: Let 'em die let 'em die let em shrivel up and die
             //Fighter.GetStatus().HPLock = 1;
@@ -119,6 +123,13 @@ namespace LikeABrawler2
             base.CombatUpdate();
 
             LastTimeSinceSkillUsed += DragonEngine.deltaTime;
+
+            //we were converted to a brawler player
+            if(Mod.IsBrawlerPlayer(Fighter))
+            {
+                CharacterHandle = 0;
+                Fighter._ptr = IntPtr.Zero;
+            }    
         }
     }
 }

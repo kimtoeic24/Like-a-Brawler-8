@@ -294,6 +294,16 @@ namespace LikeABrawler2
             PlayerCharacter = chara;
             PlayerFighter = FighterManager.GetFighter(idx);
 
+            Mod.RegisterPlayer(chara, idx);
+
+            var mainPlayer = Mod.GetPlayer(0);
+            var tempPlayer = Mod.GetPlayer(Mod.Players.Count - 1);
+
+            //Mod.Players[0] = tempPlayer;
+            // Mod.Players[1] = mainPlayer;
+
+            mainPlayer.ToTurnBased();
+
             EntityHandle<CameraBase> cam = PlayerCharacter.GetSceneEntity<CameraBase>(SceneEntity.camera_free);
 
             if (cam.IsValid())

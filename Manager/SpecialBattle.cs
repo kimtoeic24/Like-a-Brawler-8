@@ -62,7 +62,10 @@ namespace LikeABrawler2
                         {
                             if (BrawlerBattleManager.CurrentPhase == BattleTurnManager.TurnPhase.Event)
                                 if (!HeatActionManager.IsY8BHact)
+                                {
+                                    Mod.MainPlayer.ToTurnBased();
                                     BrawlerBattleManager.MakeNakamaMain(0); // back to kasuga
+                                }
                         }
                     }
                     break;

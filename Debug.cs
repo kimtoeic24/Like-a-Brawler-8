@@ -23,8 +23,8 @@ namespace LikeABrawler2
             {
                 if (DragonEngine.IsKeyDown(VirtualKey.P))
                 {
+                    BrawlerBattleManager.MakeNakamaMain(1);
                     DragonEngine.Log("Misc debug key");
-                    DragonEngine.Log(TimelineManager.CheckClockAchievement(53, 27, 6));
                 }
 
                 if (DragonEngine.IsKeyDown(VirtualKey.C))

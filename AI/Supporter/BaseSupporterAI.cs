@@ -10,7 +10,7 @@ namespace LikeABrawler2
     {
         public SupporterFlags Flags = 0;
 
-        private float m_nextAttackTime = 3.5f;
+        protected float m_nextAttackTime = 3.5f;
 
         public override void LoadContent()
         {

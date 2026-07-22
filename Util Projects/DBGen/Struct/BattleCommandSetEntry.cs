@@ -9,5 +9,6 @@ namespace DBGen
     public class BattleCommandSetEntry
     {
         public string MotionSet;
+        public float? SyncMoveSpeed;
     }
 }

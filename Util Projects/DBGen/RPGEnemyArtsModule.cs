@@ -19,7 +19,7 @@ namespace DBGen
             string rootDir = Path.Combine(Program.refPath, "arts");
             string listFile = Path.Combine(rootDir, "list.txt");
 
-            ARMP rpgEnemyArtsData = Program.GetInputTable("rpg_enemy_arts_data");
+            ARMP rpgEnemyArtsData = Program.GetInputPUIDTable("rpg_enemy_arts_data");
 
             if (rpgEnemyArtsData == null)
                 return;
@@ -30,7 +30,7 @@ namespace DBGen
             List<string> list = File.ReadAllLines(listFile).ToList();
 
             ARMP rpgSkillData = Program.GetOutputDBTable("rpg_skill");
-            ARMP rpgEnemyArtsType = Program.GetInputTable("rpg_enemy_arts_type");
+            ARMP rpgEnemyArtsType = Program.GetInputPUIDTable("rpg_enemy_arts_type");
 
             foreach (string str in Directory.GetDirectories(rootDir))
             {

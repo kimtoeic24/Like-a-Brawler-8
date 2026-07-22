@@ -29,7 +29,7 @@ namespace DBGen
             string genDir = "motion/gen/flag/";
             string genFilePath = genDir + "_gen.info";
 
-            ARMP motionFlagBin = Program.GetInputTable("motion_flag_info");
+            ARMP motionFlagBin = Program.GetInputPUIDTable("motion_flag_info");
 
             if (motionFlagBin == null)
                 return;

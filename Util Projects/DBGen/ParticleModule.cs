@@ -45,7 +45,7 @@ namespace DBGen
 
             File.WriteAllLines(listFile, list);
 
-            ARMP particles = Program.GetInputTable("particle");
+            ARMP particles = Program.GetInputPUIDTable("particle");
 
             if (particles == null)
                 return;

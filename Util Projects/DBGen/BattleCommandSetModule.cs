@@ -25,7 +25,7 @@ namespace DBGen
             string rootDir = Path.Combine("db_gen.puid", "command_set");
             string listFile = Path.Combine(rootDir, "list.txt");
 
-            ARMP battleCommandSet = Program.GetInputTable("battle_command_set");
+            ARMP battleCommandSet = Program.GetInputPUIDTable("battle_command_set");
 
             if (battleCommandSet == null)
                 return;
@@ -50,12 +50,15 @@ namespace DBGen
                 BattleCommandSetEntry entryDat = JsonConvert.DeserializeObject<BattleCommandSetEntry>(File.ReadAllText(rootDir + @"\" + str));
                 ArmpEntry entry = battleCommandSet.GetMainTable().AddEntry();
                 entry.SetValueFromColumn("motion_set", (ushort)battleMotionSet.GetMainTable().GetEntry(entryDat.MotionSet).ID);
+
+                if(entryDat.SyncMoveSpeed.HasValue)
+                    entry.SetValueFromColumn("sync_move_speed", entryDat.SyncMoveSpeed.Value);
+
                 ArmpEntry subEntry = battleCommandSet.GetMainTable().Indexer.AddEntry(Path.GetFileNameWithoutExtension(str));
                 subEntry.SetValueFromColumn("0", cfcList.GetMainTable().GetEntry(subEntry.Name).ID);
                 subEntry.SetValueFromColumn("2", entry.ID);
             }
 
-            File.WriteAllLines(Path.Combine(Program.dbPath, "battle_command_set.db_index"), Program.CacheARMP(Program.GetOutputPUIDTable("battle_command_set")));
             ArmpFileWriter.WriteARMPToFile(battleCommandSet, Path.Combine(Program.dbPath, "battle_command_set.bin"));
         }
     }

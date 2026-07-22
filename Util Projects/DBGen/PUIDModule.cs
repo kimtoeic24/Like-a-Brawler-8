@@ -24,7 +24,7 @@ namespace DBGen
                 return;
             }
 
-            ARMP table = Program.GetInputTable(puidName);
+            ARMP table = Program.GetInputPUIDTable(puidName);
 
             if (table == null)
             {

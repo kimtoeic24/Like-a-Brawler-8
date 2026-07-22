@@ -86,6 +86,7 @@ namespace LikeABrawler2
         {
             //Ichiban animations are too silly on others.
             if (IsOtherPlayer())
+                if(!Fighter.IsValid())
                 Character.HumanModeManager.CommandsetModel.SetCommandSet(1, (BattleCommandSetID)DBManager.GetCommandSet("p_kiryu_legend"));
         }
 
@@ -1109,6 +1110,16 @@ namespace LikeABrawler2
 
             //consume the tame
             AuthNodeBattleTame.Reset();
+        }
+
+        //back to turn based mode we go, we are gonna dispose ourselves too
+        public unsafe void ToTurnBased()
+        {
+            bool* free_movement_mode = (bool*)(Character.Pointer.ToInt64() + 0x11A3);
+            *free_movement_mode = false;
+
+            //Will be auto cleaned by the game
+            CharacterHandle = 0;
         }
     }
 }

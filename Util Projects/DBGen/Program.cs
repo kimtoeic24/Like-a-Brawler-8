@@ -15,6 +15,7 @@ namespace DBGen
         public static string lang = "en";
         public static string refPath = Path.Combine("db_gen");
         public static string refInput = Path.Combine(Environment.CurrentDirectory, refPath, "_input");
+        public static string refInputPuid = Path.Combine(Environment.CurrentDirectory, "db_gen.puid", "_input");
         public static string project = "elvis";
 
         public static Game Game = Game.LADIW;
@@ -132,6 +133,8 @@ namespace DBGen
                 Console.WriteLine();
                 ParticleModule.Procedure();
                 Console.WriteLine();
+                BattleCommandSetModule.Procedure();
+                Console.WriteLine();
                 TalkParamModule.Procedure();
                 TalkSelectModule.Procedure();
                 Console.WriteLine();
@@ -148,7 +151,6 @@ namespace DBGen
                 InputGameStateModule.Procedure();
                 BattleCtrlTypeModule.Procedure();
                 Console.WriteLine();
-                BattleCommandSetModule.Procedure();
                 RPGSkillModule.Procedure();
                 Console.WriteLine();
                 RPGEnemyArtsModule.Procedure();
@@ -167,6 +169,16 @@ namespace DBGen
         public static ARMP GetInputTable(string tableName)
         {
             string path = Path.Combine(refInput, tableName + ".bin");
+
+            if (!File.Exists(path))
+                return null;
+
+            return ArmpFileReader.ReadARMP(path);
+        }
+
+        public static ARMP GetInputPUIDTable(string tableName)
+        {
+            string path = Path.Combine(refInputPuid, tableName + ".bin");
 
             if (!File.Exists(path))
                 return null;

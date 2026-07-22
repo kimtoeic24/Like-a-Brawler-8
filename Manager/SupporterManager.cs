@@ -81,18 +81,17 @@ namespace LikeABrawler2
             {
                 foreach (Fighter fighter in BrawlerBattleManager.AllFighters)
                 {
-                    if (!fighter.IsMainPlayer() && (fighter.IsPartyMember() || !fighter.IsEnemy()))
+                    if (!Mod.IsBrawlerPlayer(fighter) && (fighter.IsPartyMember() || !fighter.IsEnemy()))
                     {
                         if (!Supporters.ContainsKey(fighter.Character.UID))
                         {
-                            if(fighter.Character.UID != Mod.MainPlayerCharacter.UID)
-                                CreateSupporter(fighter, fighter.Character.Attributes.player_id);
+                            CreateSupporter(fighter, fighter.Character.Attributes.player_id);
                         }
                     }
                 }
             }
 
-            Supporters = Supporters.Where(x => new EntityHandle<Character>(x.Key).IsValid()).ToDictionary(x => x.Key, x => x.Value);
+            Supporters = Supporters.Where(x => x.Value.CharacterHandle.IsValid()).ToDictionary(x => x.Key, x => x.Value);
             SupportersNearest = Supporters.OrderBy(x => Vector3.Distance(Mod.MainPlayerCharacter.Transform.Position, x.Value.Character.Transform.Position)).Select( x => x.Value).ToArray();
 
             foreach (var kv in Supporters)
@@ -101,8 +100,7 @@ namespace LikeABrawler2
                 supporter.Update();
 
                 if (BattleTurnManager.CurrentPhase == BattleTurnManager.TurnPhase.Action && !HeatActionManager.IsHAct() && !Mod.IsGamePaused)
-                    if(supporter.Character != Mod.MainPlayerCharacter)
-                        supporter.CombatUpdate();
+                    supporter.CombatUpdate();
             }
         }
 
@@ -128,11 +126,11 @@ namespace LikeABrawler2
 
             ai.Fighter = fighter;
             ai.CharacterHandle = fighter.Character;
-            BrawlerFighterInfo.Infos.Add(ai.Character.UID, new BrawlerFighterInfo() { Fighter = fighter});
+            BrawlerFighterInfo.Infos[ai.Character.UID] = new BrawlerFighterInfo() { Fighter = fighter};
 
             ai.Awake();
 
-            Supporters.Add(fighter.Character.UID, ai);
+            Supporters[fighter.Character.UID] = ai;
 
             return ai;
         }
