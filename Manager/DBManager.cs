@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Newtonsoft.Json;
 using LibARMP;
 using LibARMP.IO;
 
@@ -88,7 +87,7 @@ namespace LikeABrawler2
                         continue;
                     }
 
-                    Rebalances[id] = JsonConvert.DeserializeObject<EnemyRebalanceEntry>(File.ReadAllText(file));
+                    Rebalances[id] = System.Text.Json.JsonSerializer.Deserialize<EnemyRebalanceEntry>(File.ReadAllText(file));
                 }
             }
 
