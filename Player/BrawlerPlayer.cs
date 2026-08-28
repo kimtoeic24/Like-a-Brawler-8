@@ -375,7 +375,7 @@ namespace LikeABrawler2
             foreach (string player in Enum.GetNames(typeof(Player.ID)))
             {
                 string playerEhcPathRel = Path.Combine("player/", player + ".ehc");
-                string playerEhcPathFull = Path.Combine(Mod.ModPath, "battle", "ehc", playerEhcPathRel);
+                string playerEhcPathFull = Path.Combine(Mod.Instance.ModPath, "battle", "ehc", playerEhcPathRel);
 
                 if (File.Exists(playerEhcPathFull))
                 {
@@ -395,7 +395,7 @@ namespace LikeABrawler2
             foreach (string job in Enum.GetNames(typeof(RPGJobID)))
             {
                 string jobEhcPathRel = Path.Combine("job/", job + ".ehc");
-                string jobEhcPathFull = Path.Combine(Mod.ModPath, "battle", "ehc", jobEhcPathRel);
+                string jobEhcPathFull = Path.Combine(Mod.Instance.ModPath, "battle", "ehc", jobEhcPathRel);
 
                 if (File.Exists(jobEhcPathFull))
                 {

@@ -105,7 +105,7 @@ namespace LikeABrawler2
                 }
             };
 
-            foreach (string str in File.ReadAllLines(Path.Combine(Mod.ModPath, "mdb.brawler/weapon_use_count.txt")))
+            foreach (string str in File.ReadAllLines(Path.Combine(Mod.Instance.ModPath, "mdb.brawler/weapon_use_count.txt")))
             {
                 string[] split = str.Split(' ');
 

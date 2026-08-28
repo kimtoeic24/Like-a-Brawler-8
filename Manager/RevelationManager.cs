@@ -35,7 +35,7 @@ namespace LikeABrawler2
         {
             m_revelationMap.Clear();
 
-            string revelationsFilePath = Path.Combine(Mod.ModPath, "mdb.brawler", "revelations_ichiban.txt");
+            string revelationsFilePath = Path.Combine(Mod.Instance.ModPath, "mdb.brawler", "revelations_ichiban.txt");
 
             if (!File.Exists(revelationsFilePath))
                 return;

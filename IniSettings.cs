@@ -18,7 +18,7 @@ namespace LikeABrawler2
 
         public static string IniPath()
         {
-            return Path.Combine(Mod.ModPath, "mod_settings.ini");
+            return Path.Combine(Mod.Instance.ModPath, "mod_settings.ini");
         }
 
         public static void Read()

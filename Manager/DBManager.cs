@@ -55,7 +55,7 @@ namespace LikeABrawler2
 
 
             //TEMP!
-            foreach (string str in File.ReadAllLines(Path.Combine(Mod.ModPath, "db.elvis.en/sound_cuesheet_info_map___TEMP.toberemoved")))
+            foreach (string str in File.ReadAllLines(Path.Combine(Mod.Instance.ModPath, "db.elvis.en/sound_cuesheet_info_map___TEMP.toberemoved")))
             {
                 string[] split = str.Split(' ');
                 m_soundCuesheet.Add(split[1], uint.Parse(split[0]));
@@ -69,7 +69,7 @@ namespace LikeABrawler2
             */
 
 
-            string mdbDir = Path.Combine(Mod.ModPath, "mdb.brawler");
+            string mdbDir = Path.Combine(Mod.Instance.ModPath, "mdb.brawler");
 
             string rebalancePath = Path.Combine(mdbDir, "soldier_rebalance");
             string wepAttackPath = Path.Combine(mdbDir, "pickup_attack_list");
@@ -250,7 +250,7 @@ namespace LikeABrawler2
 
         private static Dictionary<string, uint> ReadCachedDBArmp(string name)
         {
-            string file = Path.Combine(Mod.ModPath, "db.elvis.en/" + name + ".db_index");
+            string file = Path.Combine(Mod.Instance.ModPath, "db.elvis.en/" + name + ".db_index");
 
             if (!File.Exists(file))
                 throw new Exception("DB Cache file does not exist: " + file);
@@ -274,7 +274,7 @@ namespace LikeABrawler2
 
         private static Dictionary<string, uint> ReadCachedPuidArmp(string name)
         {
-            string file = Path.Combine(Mod.ModPath, "puid.elvis/" + name + ".db_index");
+            string file = Path.Combine(Mod.Instance.ModPath, "puid.elvis/" + name + ".db_index");
 
             if (!File.Exists(file))
                 throw new Exception("DB Cache file does not exist: " + file);

@@ -13,10 +13,7 @@ namespace LikeABrawler2
 {
     public class Mod : DragonEngineMod
     {
-        [DllImport("User32.dll", CharSet = CharSet.Unicode)]
-        public static extern int MessageBox(IntPtr h, string m, string c, int type);
-
-        public static string ModPath;
+        public static Mod Instance;
 
         public static bool IsGameFocused = false;
         public static bool IsGamePaused = false;
@@ -120,13 +117,12 @@ namespace LikeABrawler2
         {
             base.OnModInit();
 
+            Instance = this;
+
             DragonEngine.Log("Like A Brawler Start");
 
             try
             {
-                Assembly assmb = Assembly.GetExecutingAssembly();
-                ModPath = Path.GetDirectoryName(assmb.Location);
-
                 IniSettings.Read();
 
                 DBManager.Init();

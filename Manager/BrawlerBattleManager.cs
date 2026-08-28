@@ -431,41 +431,6 @@ namespace LikeABrawler2
                 case 161:
                     SpecialBattle.TriosFight();
                     break;
-                case 174: // ebina
-                    new DETask(delegate { return BattleTurnManager.CurrentPhase == BattleTurnManager.TurnPhase.Action && !GameVarManager.GetValueBool(GameVarID.is_hact); }, delegate
-                    {
-                        new DETaskTime(0.06f, delegate
-                        {
-                            if (NakamaManager.GetCharacterHandle(1).IsValid())
-                            {
-                                HActRequestOptions opts = new HActRequestOptions();
-                                opts.base_mtx.matrix = PlayerCharacter.GetMatrix();
-                                opts.base_mtx.matrix.ForwardDirection = new Vector4(0, 0, -1);
-                                opts.base_mtx.matrix.LeftDirection = new Vector4(-1, 0, 0);
-                                opts.id = DBManager.GetTalkParam("y8bb1780_ebn_party_decide");
-                                opts.is_force_play = true;
-
-                                opts.Register(HActReplaceID.hu_player1, PlayerCharacter);
-                                opts.Register(HActReplaceID.hu_npc_00, FighterManager.GetFighter(1).Character);
-                                opts.Register(HActReplaceID.hu_npc_01, FighterManager.GetFighter(2).Character);
-                                opts.Register(HActReplaceID.hu_npc_02, FighterManager.GetFighter(3).Character);
-
-                                HeatActionManager.RequestTalk(opts);
-
-                                new DETask(delegate { return HeatActionManager.IsHAct(); }, delegate
-                                {
-                                    SkipTurn();
-                                    new DETask(delegate
-                                    {
-                                        SkipTurn();
-                                        return !HeatActionManager.IsHAct();
-                                    }, null);
-                                });
-
-                            }
-                        });
-                    });
-                    break;
                 case 175: //shark fight (vs player)
                     new DETask(delegate { return BattleTurnManager.CurrentPhase == BattleTurnManager.TurnPhase.Action; }, delegate
                     {

@@ -32,7 +32,7 @@ namespace LikeABrawler2
 
         public static EHC LoadYHC(string name)
         {
-            string path = Path.Combine(Mod.ModPath, "battle", "ehc", name);
+            string path = Path.Combine(Mod.Instance.ModPath, "battle", "ehc", name);
             EHC ehc = null;
             ehc = EHC.Read(path);
 
@@ -48,7 +48,7 @@ namespace LikeABrawler2
 
         public static YFC LoadYFC(string name)
         {
-            string path = Path.Combine(Mod.ModPath, "battle", "yfc", name);
+            string path = Path.Combine(Mod.Instance.ModPath, "battle", "yfc", name);
             YFC yfc = YFC.Read(path);
 
 #if DEBUG
