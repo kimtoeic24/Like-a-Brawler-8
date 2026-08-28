@@ -452,17 +452,16 @@ namespace LikeABrawler2
 
             IsExtremeHeat = false;
 
-            //Recursively enumerate and load all combat animations
-            //Using commandset 235 as reference, which is kiryu krh
-            BattleResourceManager.DoPrepareRefAll(235);
+            BattleResourceManager.DoPrepareRefAll((uint)GetNormalMovesetForPlayer(PlayerID));
+            BattleResourceManager.DoPrepareRefAll((uint)GetCommandSetForJob(PlayerID, CurrentJob));
 
 
-            if (!IsOtherPlayer())
-            {
+           // if (!IsOtherPlayer())
+           // {
                 ToNormalMoveset();
-            }
-            else
-                SetupWeapon(Fighter._ptr);
+           // }
+            //else
+              //  SetupWeapon(Fighter._ptr);
 
             if (IsKiryu() || Player.GetCurrentJob(PlayerID) == RPGJobID.kiryu_01)
                 CurrentStyle = PlayerStyle.Default;
@@ -608,27 +607,31 @@ namespace LikeABrawler2
             BattleCommandSetID moveset = GetNormalMovesetForPlayer(PlayerID);
 
             //else they will be stuck on their job motinoset for some reason
-            if (IsOtherPlayer() && !Fighter.IsValid())
+            if (IsOtherPlayer() && !BrawlerBattleManager.Battling)
             {
                 moveset = (BattleCommandSetID)DBManager.GetCommandSet("p_kiryu_legend");
             }
 
-            Mod.MainPlayerCharacter.HumanModeManager.CommandsetModel.SetCommandSet(0, moveset);
+            Mod.MainPlayerCharacter.HumanModeManager.CommandsetModel.SetCommandSet(!IsOtherPlayer() ?  (uint)0 : (uint)1 , moveset);
 
-            if (!Mod.MainPlayerFighter.IsValid())
+            if (!BrawlerBattleManager.Battling)
             {
                 Mod.MainPlayerCharacter.HumanModeManager.CommandsetModel.SetCommandSet(1, moveset);
             }
 
             //Yakuza 8 limitation: we cannot get the equipped weapon for another job, it has to be another one
-            if (DoesJobHaveWeapons(Player.GetCurrentJob(PlayerID)))
-                if (IsOtherPlayer())
-                    if (Mod.MainPlayerFighter.IsValid())
-                    {
-                        SetupWeapon(Mod.MainPlayerFighter._ptr);
-                        Mod.MainPlayerFighter.GetWeapon(AttachmentCombinationID.right_weapon).Unit.Get().Arms.SetFromPocket(true);
-                        Mod.MainPlayerFighter.GetWeapon(AttachmentCombinationID.left_weapon).Unit.Get().Arms.SetFromPocket(true);
-                    }
+
+            if (BrawlerBattleManager.Battling)
+            {
+                if (DoesJobHaveWeapons(Player.GetCurrentJob(PlayerID)))
+                    if (IsOtherPlayer())
+                        if (Mod.MainPlayerFighter.IsValid())
+                        {
+                            SetupWeapon(Mod.MainPlayerFighter._ptr);
+                            Mod.MainPlayerFighter.GetWeapon(AttachmentCombinationID.right_weapon).Unit.Get().Arms.SetFromPocket(true);
+                            Mod.MainPlayerFighter.GetWeapon(AttachmentCombinationID.left_weapon).Unit.Get().Arms.SetFromPocket(true);
+                        }
+            }
 
             //otherwise, dont do shit, if this is a party member that is the main playable character right now for some reason
             //its modder's responsibility to edit the player cfc.
@@ -790,7 +793,7 @@ namespace LikeABrawler2
                 }
 
                 uint commandSet = (uint)GetCommandSetForJob(targetPlayerID, Player.GetCurrentJob(PlayerID));
-                playerChara.HumanModeManager.CommandsetModel.SetCommandSet(0, (BattleCommandSetID)commandSet);
+                playerChara.HumanModeManager.CommandsetModel.SetCommandSet(1, (BattleCommandSetID)commandSet);
                 playerChara.Components.EffectEvent.Get().PlayEventOverride(EffectEventCharaID.YZ_Chara_Cange01);
             }
             else

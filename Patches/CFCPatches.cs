@@ -89,11 +89,7 @@ namespace LikeABrawler2
                 case 19: //ShouldExitJobCommandset
                     if (player == null)
                         return false;
-
-                    if (player.IsOtherPlayer())
-                        return false;
-                    else 
-                        return !BrawlerPlayer.IsExtremeHeat || BrawlerBattleManager.CurrentPhase >= BattleTurnManager.TurnPhase.End;
+                    return !BrawlerPlayer.IsExtremeHeat || BrawlerBattleManager.CurrentPhase >= BattleTurnManager.TurnPhase.End;
                 case 20: //ShouldExitJobStyle (needed for Kiryu workarounds
                     if (player == null)
                         return false;
