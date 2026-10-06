@@ -44,11 +44,14 @@ jobs:
           if (-not $dll) { throw "Kiryu Balance Addon.dll not found" }
           Copy-Item $dll.FullName "artifact/Kiryu Balance Addon.dll"
           @"
-          # Kiryu Balance Addon
-          # 3.0 = enemies have triple HP while Kiryu is in LAB8 realtime mode.
-          # Try 4.0 for roughly quarter effective damage.
-          EnemyHpMultiplier=3.0
+          # Kiryu Balance Addon V6
+          # 0.05 = Kiryu AttackPower/SPAttackPower reduced to 5% for testing.
+          # After confirming it works, try 0.25 for 25% power.
+          KiryuAttackPowerMultiplier=0.05
           "@ | Set-Content "artifact/kiryu_balance.ini"
+          @"
+          InitDll=Kiryu Balance Addon.dll
+          "@ | Set-Content "artifact/de_mod.ini"
 
       - name: Upload addon
         uses: actions/upload-artifact@v4
