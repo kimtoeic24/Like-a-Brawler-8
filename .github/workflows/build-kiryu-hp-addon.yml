@@ -1,0 +1,58 @@
+name: Build Kiryu HP Addon
+
+on:
+  push:
+    branches:
+      - kiryu-hp-addon-safe
+    paths:
+      - 'KiryuBalanceAddon/**'
+      - '.github/workflows/build-kiryu-hp-addon.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout addon source
+        uses: actions/checkout@v4
+        with:
+          ref: kiryu-hp-addon-safe
+          path: Like-a-Brawler-8
+
+      - name: Checkout DragonEngine.NET
+        uses: actions/checkout@v4
+        with:
+          repository: Fronkln/DragonEngine.NET
+          path: Y7Internal.NET
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build addon
+        shell: pwsh
+        run: |
+          dotnet restore "Like-a-Brawler-8/KiryuBalanceAddon/KiryuBalanceAddon.csproj" -p:Platform=x64
+          dotnet build "Like-a-Brawler-8/KiryuBalanceAddon/KiryuBalanceAddon.csproj" -c "Infinite Wealth Release" -p:Platform=x64 --no-restore
+
+      - name: Stage addon only
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifact | Out-Null
+          $dll = Get-ChildItem -Recurse "Like-a-Brawler-8/KiryuBalanceAddon/bin" -Filter "Kiryu Balance Addon.dll" | Select-Object -First 1
+          if (-not $dll) { throw "Kiryu Balance Addon.dll not found" }
+          Copy-Item $dll.FullName "artifact/Kiryu Balance Addon.dll"
+          @"
+          # Kiryu Balance Addon
+          # 3.0 = enemies have triple HP while Kiryu is in LAB8 realtime mode.
+          # Try 4.0 for roughly quarter effective damage.
+          EnemyHpMultiplier=3.0
+          "@ | Set-Content "artifact/kiryu_balance.ini"
+
+      - name: Upload addon
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kiryu-Balance-Addon-SAFE
+          path: artifact/*
+          if-no-files-found: error
