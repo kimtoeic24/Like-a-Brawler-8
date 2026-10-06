@@ -13,6 +13,7 @@ namespace LikeABrawler2
         public static float PartyMemberSkillMPReqRatio = 0.5f;
         public static int PartyMemberSkillChance = 20;
         public static float PartyMemberSkillTime = 30;
+        public static float KiryuDamageMultiplier = 0.25f;
 
         public static bool AllowResurgenceMusic = false;
 
@@ -32,6 +33,8 @@ namespace LikeABrawler2
             PartyMemberSkillChance = int.Parse(ini.GetValue("PartyMemberSkillChance", "Party", "20"));
             PartyMemberSkillTime = float.Parse(ini.GetValue("PartyMemberSkillTime", "Party", "30"), CultureInfo.InvariantCulture);
             AllowResurgenceMusic = ini.GetValue("PlayDragonResurgenceMusic", "Gameplay", "1") == "1";
+            KiryuDamageMultiplier = float.Parse(ini.GetValue("KiryuDamageMultiplier", "Gameplay", "0.25"), CultureInfo.InvariantCulture);
+            KiryuDamageMultiplier = Math.Clamp(KiryuDamageMultiplier, 0.05f, 1.0f);
             BrawlerUIManager.UseClassicGauge = ini.GetValue("UseClassicGauge", "Gameplay", "0") == "1";
         }
 
@@ -44,6 +47,7 @@ namespace LikeABrawler2
             ini.WriteValue("KiryuRealtime", "Gameplay", IsKiryuRealtime.ToString());
             ini.WriteValue("AllowResurgenceMusic", "Gameplay", Convert.ToByte(AllowResurgenceMusic).ToString());
             ini.WriteValue("UseClassicGauge", "Gameplay", Convert.ToByte(BrawlerUIManager.UseClassicGauge).ToString());
+            ini.WriteValue("KiryuDamageMultiplier", "Gameplay", KiryuDamageMultiplier.ToString(CultureInfo.InvariantCulture));
             ini.WriteValue("PartyMemberSkillMPRequirementRatio", "Party", PartyMemberSkillMPReqRatio.ToString(CultureInfo.InvariantCulture));
             ini.WriteValue("PartyMemberSkillChance", "Party", PartyMemberSkillChance.ToString());
             ini.WriteValue("PartyMemberSkillTime", "Party", PartyMemberSkillTime.ToString(CultureInfo.InvariantCulture));
