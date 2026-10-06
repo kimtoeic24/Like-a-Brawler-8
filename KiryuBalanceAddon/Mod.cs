@@ -62,7 +62,7 @@ namespace KiryuBalanceAddon
                     string value = line.Substring(line.IndexOf('=') + 1).Trim();
 
                     if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed))
-                        EnemyHpMultiplier = Math.Clamp(parsed, 1.0f, 10.0f);
+                        EnemyHpMultiplier = Math.Clamp(parsed, 1.0f, 30.0f);
                 }
             }
             catch (Exception ex)
