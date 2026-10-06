@@ -1,8 +1,8 @@
 using DragonEngineLibrary;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 
 namespace KiryuBalanceAddon
 {
@@ -10,43 +10,51 @@ namespace KiryuBalanceAddon
     {
         private const string Lab8ModName = "Like A Brawler 8";
         private const string Lab8ModTypeName = "LikeABrawler2.Mod";
+        private const string Lab8BattleTypeName = "LikeABrawler2.BrawlerBattleManager";
 
-        private static readonly HashSet<uint> ScaledEnemyUids = new();
-        private static readonly Dictionary<uint, EnemyObservation> EnemyObservations = new();
-
-        private sealed class EnemyObservation
-        {
-            public long LastMaxHp;
-            public long LastChangeMs;
-        }
         private static Mod Instance;
-        private static float EnemyHpMultiplier = 3.0f;
-        private static bool ErrorLogged;
-        private static long LastDiagnosticMs;
+
+        private static Type Lab8ModType;
+        private static Type Lab8BattleType;
+        private static FieldInfo GamemodeField;
+        private static FieldInfo BattlingField;
+        private static FieldInfo PlayerFighterField;
+
+        private static float KiryuAttackPowerMultiplier = 0.05f;
+        private static long EligibleSinceMs;
+        private static long LastVerifyMs;
+
+        private static bool Applied;
+        private static Fighter ModifiedFighter;
+        private static uint OriginalAttackPower;
+        private static uint OriginalSPAttackPower;
+        private static uint TargetAttackPower;
+        private static uint TargetSPAttackPower;
 
         public override void OnModInit()
         {
             base.OnModInit();
-
             Instance = this;
             LoadSettings();
 
             try
             {
-                string loadedPath = Path.Combine(ModPath, "kiryu_balance_loaded.txt");
                 File.WriteAllText(
-                    loadedPath,
+                    Path.Combine(ModPath, "kiryu_balance_loaded.txt"),
                     $"Loaded at {DateTime.Now:yyyy-MM-dd HH:mm:ss}\r\n" +
-                    $"ModPath={ModPath}\r\n" +
-                    $"EnemyHpMultiplier={EnemyHpMultiplier:0.##}\r\n");
+                    $"Mode=KiryuAttackPower\r\n" +
+                    $"KiryuAttackPowerMultiplier={KiryuAttackPowerMultiplier:0.###}\r\n");
             }
-            catch (Exception ex)
-            {
-                DragonEngine.Log($"Kiryu Balance Addon: failed to write load marker: {ex}");
-            }
+            catch { }
 
             DragonEngine.RegisterJob(Update, DEJob.Update);
-            DragonEngine.Log($"Kiryu Balance Addon loaded. Enemy HP multiplier: {EnemyHpMultiplier:0.##}x");
+            DragonEngine.Log($"Kiryu Balance Addon V6 loaded. Kiryu AP multiplier: {KiryuAttackPowerMultiplier:0.###}");
+        }
+
+        public override bool OnModUnload()
+        {
+            RestoreIfSafe();
+            return true;
         }
 
         private static string SettingsPath =>
@@ -54,161 +62,187 @@ namespace KiryuBalanceAddon
 
         private static void LoadSettings()
         {
+            KiryuAttackPowerMultiplier = 0.05f;
+
             try
             {
                 if (!File.Exists(SettingsPath))
                 {
-                    File.WriteAllText(SettingsPath,
-                        "# Kiryu Balance Addon\r\n" +
-                        "# Applies only when the current player is Kiryu. No LAB8 internal state is read.\r\n" +
-                        "EnemyHpMultiplier=3.0\r\n");
-                    EnemyHpMultiplier = 3.0f;
+                    File.WriteAllText(
+                        SettingsPath,
+                        "# Kiryu Balance Addon V6\r\n" +
+                        "# 0.05 = 5% of Kiryu's normal AttackPower/SPAttackPower.\r\n" +
+                        "KiryuAttackPowerMultiplier=0.05\r\n");
                     return;
                 }
 
                 foreach (string rawLine in File.ReadAllLines(SettingsPath))
                 {
                     string line = rawLine.Trim();
-
-                    if (line.Length == 0 || line.StartsWith("#") || !line.StartsWith("EnemyHpMultiplier=", StringComparison.OrdinalIgnoreCase))
+                    if (!line.StartsWith("KiryuAttackPowerMultiplier=", StringComparison.OrdinalIgnoreCase))
                         continue;
 
                     string value = line.Substring(line.IndexOf('=') + 1).Trim();
-
                     if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed))
-                        EnemyHpMultiplier = Math.Clamp(parsed, 1.0f, 100.0f);
+                        KiryuAttackPowerMultiplier = Math.Clamp(parsed, 0.01f, 1.0f);
                 }
             }
             catch (Exception ex)
             {
-                EnemyHpMultiplier = 3.0f;
-                DragonEngine.Log($"Kiryu Balance Addon settings error; using 3.0x. {ex.Message}");
+                DragonEngine.Log($"Kiryu Balance Addon V6 settings error: {ex.Message}");
             }
         }
 
-        private static bool IsKiryu()
+        private static bool EnsureLab8Access()
         {
-            Fighter player = FighterManager.GetPlayer();
+            if (Lab8ModType != null && Lab8BattleType != null &&
+                GamemodeField != null && BattlingField != null && PlayerFighterField != null)
+                return true;
 
-            if (!player.IsValid())
+            Assembly lab8 = ModManager.GetModMainAssembly(Lab8ModName);
+            if (lab8 == null)
                 return false;
 
-            return player.Character.Attributes.player_id == Player.ID.kiryu;
+            Lab8ModType = lab8.GetType(Lab8ModTypeName);
+            Lab8BattleType = lab8.GetType(Lab8BattleTypeName);
+
+            if (Lab8ModType == null || Lab8BattleType == null)
+                return false;
+
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+            GamemodeField = Lab8ModType.GetField("Gamemode", flags);
+            BattlingField = Lab8BattleType.GetField("Battling", flags);
+            PlayerFighterField = Lab8BattleType.GetField("PlayerFighter", flags);
+
+            return GamemodeField != null && BattlingField != null && PlayerFighterField != null;
         }
 
-        private static string AppliedLogPath =>
-            Path.Combine(Instance.ModPath, "kiryu_balance_applied.log");
+        private static bool TryGetEligibleKiryu(out Fighter fighter)
+        {
+            fighter = default;
+
+            if (!EnsureLab8Access())
+                return false;
+
+            object battlingObj = BattlingField.GetValue(null);
+            object gamemodeObj = GamemodeField.GetValue(null);
+
+            if (battlingObj is not bool battling || !battling)
+                return false;
+
+            if (gamemodeObj is not int gamemode || gamemode != 1)
+                return false;
+
+            object fighterObj = PlayerFighterField.GetValue(null);
+            if (fighterObj is not Fighter lab8Fighter)
+                return false;
+
+            if (!lab8Fighter.IsValid())
+                return false;
+
+            if (lab8Fighter.Character.Attributes.player_id != Player.ID.kiryu)
+                return false;
+
+            fighter = lab8Fighter;
+            return true;
+        }
 
         private static void Update()
         {
             try
             {
-                Fighter[] enemies = FighterManager.GetAllEnemies();
+                long now = Environment.TickCount64;
 
-                long diagNow = Environment.TickCount64;
-                if (diagNow - LastDiagnosticMs >= 1000)
+                if (!TryGetEligibleKiryu(out Fighter fighter))
                 {
-                    LastDiagnosticMs = diagNow;
-
-                    Fighter player = FighterManager.GetPlayer();
-                    string playerState = "invalid";
-
-                    if (player.IsValid())
-                        playerState = player.Character.Attributes.player_id.ToString();
-
-                    try
-                    {
-                        File.AppendAllText(
-                            Path.Combine(Instance.ModPath, "kiryu_balance_state.log"),
-                            $"[{DateTime.Now:HH:mm:ss}] player={playerState}, enemies={enemies.Length}, scaled={ScaledEnemyUids.Count}, multiplier={EnemyHpMultiplier:0.##}" +
-                            Environment.NewLine);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (!ErrorLogged)
-                        {
-                            DragonEngine.Log($"Kiryu Balance Addon diagnostic log error: {ex}");
-                            ErrorLogged = true;
-                        }
-                    }
-                }
-
-                // No live enemy fighters means the battle is over.
-                if (enemies.Length == 0)
-                {
-                    ScaledEnemyUids.Clear();
-                    EnemyObservations.Clear();
-                    ErrorLogged = false;
+                    EligibleSinceMs = 0;
+                    RestoreIfSafe();
                     return;
                 }
 
-                if (!IsKiryu())
+                if (EligibleSinceMs == 0)
+                {
+                    EligibleSinceMs = now;
+                    return;
+                }
+
+                // Let LAB8 finish its own battle initialization first.
+                if (now - EligibleSinceMs < 1500)
                     return;
 
-                foreach (Fighter enemy in enemies)
+                ECBattleStatus status = fighter.GetStatus();
+
+                if (!Applied)
                 {
-                    if (!enemy.IsValid() || enemy.IsDead())
-                        continue;
+                    OriginalAttackPower = status.AttackPower;
+                    OriginalSPAttackPower = status.SPAttackPower;
 
-                    uint uid = enemy.Character.UID;
+                    TargetAttackPower = Math.Max(1u, (uint)Math.Round(OriginalAttackPower * (double)KiryuAttackPowerMultiplier));
+                    TargetSPAttackPower = Math.Max(1u, (uint)Math.Round(OriginalSPAttackPower * (double)KiryuAttackPowerMultiplier));
 
-                    if (ScaledEnemyUids.Contains(uid))
-                        continue;
+                    status.AttackPower = TargetAttackPower;
+                    status.SPAttackPower = TargetSPAttackPower;
 
-                    ECBattleStatus status = enemy.GetStatus();
-                    long oldMax = status.MaxHP;
-                    long oldCurrent = status.CurrentHP;
+                    ModifiedFighter = fighter;
+                    Applied = true;
+                    LastVerifyMs = now;
 
-                    if (oldMax <= 0 || oldCurrent <= 0)
-                        continue;
+                    string line =
+                        $"[{DateTime.Now:HH:mm:ss}] Kiryu AP {OriginalAttackPower}->{TargetAttackPower}, " +
+                        $"SP {OriginalSPAttackPower}->{TargetSPAttackPower}, multiplier={KiryuAttackPowerMultiplier:0.###}";
 
-                    long now = Environment.TickCount64;
+                    File.AppendAllText(
+                        Path.Combine(Instance.ModPath, "kiryu_balance_applied.log"),
+                        line + Environment.NewLine);
 
-                    if (!EnemyObservations.TryGetValue(uid, out EnemyObservation observation))
-                    {
-                        EnemyObservations[uid] = new EnemyObservation
-                        {
-                            LastMaxHp = oldMax,
-                            LastChangeMs = now
-                        };
-                        continue;
-                    }
+                    DragonEngine.Log("Kiryu Balance Addon V6: " + line);
+                    return;
+                }
 
-                    // LAB8 may rebalance HP during fighter initialization.
-                    // Wait until max HP has remained unchanged for at least 750 ms
-                    // so this add-on runs after LAB8's own initialization instead of before it.
-                    if (observation.LastMaxHp != oldMax)
-                    {
-                        observation.LastMaxHp = oldMax;
-                        observation.LastChangeMs = now;
-                        continue;
-                    }
+                // If the game recalculates Kiryu's battle stats, re-apply only once per second.
+                if (now - LastVerifyMs >= 1000)
+                {
+                    LastVerifyMs = now;
 
-                    if (now - observation.LastChangeMs < 750)
-                        continue;
+                    if (status.AttackPower != TargetAttackPower)
+                        status.AttackPower = TargetAttackPower;
 
-                    long newMax = Math.Max(oldMax, (long)Math.Round(oldMax * (double)EnemyHpMultiplier));
-                    long newCurrent = Math.Max(1, (long)Math.Round(oldCurrent * (double)EnemyHpMultiplier));
-
-                    ScaledEnemyUids.Add(uid);
-                    EnemyObservations.Remove(uid);
-
-                    status.SetHPMax(newMax);
-                    status.CurrentHP = newCurrent;
-
-                    string applied = $"[{DateTime.Now:HH:mm:ss}] enemy {uid}: HP {oldCurrent}/{oldMax} -> {newCurrent}/{newMax} ({EnemyHpMultiplier:0.##}x)";
-                    DragonEngine.Log("Kiryu Balance Addon V4: " + applied);
-                    File.AppendAllText(AppliedLogPath, applied + Environment.NewLine);
+                    if (status.SPAttackPower != TargetSPAttackPower)
+                        status.SPAttackPower = TargetSPAttackPower;
                 }
             }
             catch (Exception ex)
             {
-                // Safety first: never let this optional add-on crash the game loop.
-                if (!ErrorLogged)
+                DragonEngine.Log($"Kiryu Balance Addon V6 update error: {ex}");
+            }
+        }
+
+        private static void RestoreIfSafe()
+        {
+            if (!Applied)
+                return;
+
+            try
+            {
+                if (ModifiedFighter.IsValid())
                 {
-                    DragonEngine.Log($"Kiryu Balance Addon update skipped after error: {ex}");
-                    ErrorLogged = true;
+                    ECBattleStatus status = ModifiedFighter.GetStatus();
+                    status.AttackPower = OriginalAttackPower;
+                    status.SPAttackPower = OriginalSPAttackPower;
                 }
+            }
+            catch
+            {
+                // Battle fighter may already be gone; its stats will be rebuilt next battle.
+            }
+            finally
+            {
+                Applied = false;
+                OriginalAttackPower = 0;
+                OriginalSPAttackPower = 0;
+                TargetAttackPower = 0;
+                TargetSPAttackPower = 0;
+                ModifiedFighter = default;
             }
         }
     }
