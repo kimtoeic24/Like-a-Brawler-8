@@ -22,6 +22,7 @@ namespace KiryuBalanceAddon
         private static Mod Instance;
         private static float EnemyHpMultiplier = 3.0f;
         private static bool ErrorLogged;
+        private static long LastDiagnosticMs;
 
         public override void OnModInit()
         {
@@ -29,6 +30,20 @@ namespace KiryuBalanceAddon
 
             Instance = this;
             LoadSettings();
+
+            try
+            {
+                string loadedPath = Path.Combine(ModPath, "kiryu_balance_loaded.txt");
+                File.WriteAllText(
+                    loadedPath,
+                    $"Loaded at {DateTime.Now:yyyy-MM-dd HH:mm:ss}\r\n" +
+                    $"ModPath={ModPath}\r\n" +
+                    $"EnemyHpMultiplier={EnemyHpMultiplier:0.##}\r\n");
+            }
+            catch (Exception ex)
+            {
+                DragonEngine.Log($"Kiryu Balance Addon: failed to write load marker: {ex}");
+            }
 
             DragonEngine.RegisterJob(Update, DEJob.Update);
             DragonEngine.Log($"Kiryu Balance Addon loaded. Enemy HP multiplier: {EnemyHpMultiplier:0.##}x");
@@ -89,6 +104,34 @@ namespace KiryuBalanceAddon
             try
             {
                 Fighter[] enemies = FighterManager.GetAllEnemies();
+
+                long diagNow = Environment.TickCount64;
+                if (diagNow - LastDiagnosticMs >= 1000)
+                {
+                    LastDiagnosticMs = diagNow;
+
+                    Fighter player = FighterManager.GetPlayer();
+                    string playerState = "invalid";
+
+                    if (player.IsValid())
+                        playerState = player.Character.Attributes.player_id.ToString();
+
+                    try
+                    {
+                        File.AppendAllText(
+                            Path.Combine(Instance.ModPath, "kiryu_balance_state.log"),
+                            $"[{DateTime.Now:HH:mm:ss}] player={playerState}, enemies={enemies.Length}, scaled={ScaledEnemyUids.Count}, multiplier={EnemyHpMultiplier:0.##}" +
+                            Environment.NewLine);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!ErrorLogged)
+                        {
+                            DragonEngine.Log($"Kiryu Balance Addon diagnostic log error: {ex}");
+                            ErrorLogged = true;
+                        }
+                    }
+                }
 
                 // No live enemy fighters means the battle is over.
                 if (enemies.Length == 0)
