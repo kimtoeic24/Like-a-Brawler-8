@@ -28,16 +28,13 @@
     <Reference Include="PIBLib">
       <HintPath>PIBLib.dll</HintPath>
     </Reference>
-    <!-- Keep other assembly hints as references if they exist locally -->
-    <Reference Include="Yarhl">
-      <HintPath>packages\Yarhl.3.1.0\lib\netstandard2.0\Yarhl.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>
     <!-- Fody/Costura as PackageReference so we can restore with SDK-style projects -->
     <PackageReference Include="MinHook.NET" Version="1.1.2" />
     <PackageReference Include="System.Resources.Extensions" Version="7.0.0" />
+    <PackageReference Include="Yarhl" Version="3.1.0" />
   </ItemGroup>
 
   <ItemGroup>
