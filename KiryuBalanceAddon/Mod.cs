@@ -13,6 +13,13 @@ namespace KiryuBalanceAddon
         private const string Lab8ModTypeName = "LikeABrawler2.Mod";
 
         private static readonly HashSet<uint> ScaledEnemyUids = new();
+        private static readonly Dictionary<uint, EnemyObservation> EnemyObservations = new();
+
+        private sealed class EnemyObservation
+        {
+            public long LastMaxHp;
+            public long LastChangeMs;
+        }
         private static Mod Instance;
         private static float EnemyHpMultiplier = 3.0f;
         private static bool ErrorLogged;
@@ -99,6 +106,7 @@ namespace KiryuBalanceAddon
                 if (enemies.Length == 0)
                 {
                     ScaledEnemyUids.Clear();
+                    EnemyObservations.Clear();
                     ErrorLogged = false;
                     return;
                 }
@@ -123,17 +131,41 @@ namespace KiryuBalanceAddon
                     if (oldMax <= 0 || oldCurrent <= 0)
                         continue;
 
-                    long newMax = Math.Max(oldMax, (long)Math.Round(oldMax * (double)EnemyHpMultiplier));
-                    long newCurrent = Math.Max(1, (long)Math.Round(oldCurrent * ((double)newMax / oldMax)));
+                    long now = Environment.TickCount64;
 
-                    // Mark only immediately before the write. If the status was not ready,
-                    // this enemy will be retried on a later frame instead of being skipped forever.
+                    if (!EnemyObservations.TryGetValue(uid, out EnemyObservation observation))
+                    {
+                        EnemyObservations[uid] = new EnemyObservation
+                        {
+                            LastMaxHp = oldMax,
+                            LastChangeMs = now
+                        };
+                        continue;
+                    }
+
+                    // LAB8 may rebalance HP during fighter initialization.
+                    // Wait until max HP has remained unchanged for at least 750 ms
+                    // so this add-on runs after LAB8's own initialization instead of before it.
+                    if (observation.LastMaxHp != oldMax)
+                    {
+                        observation.LastMaxHp = oldMax;
+                        observation.LastChangeMs = now;
+                        continue;
+                    }
+
+                    if (now - observation.LastChangeMs < 750)
+                        continue;
+
+                    long newMax = Math.Max(oldMax, (long)Math.Round(oldMax * (double)EnemyHpMultiplier));
+                    long newCurrent = Math.Max(1, (long)Math.Round(oldCurrent * (double)EnemyHpMultiplier));
+
                     ScaledEnemyUids.Add(uid);
+                    EnemyObservations.Remove(uid);
 
                     status.SetHPMax(newMax);
                     status.CurrentHP = newCurrent;
 
-                    DragonEngine.Log($"Kiryu Balance Addon: enemy {uid} HP {oldCurrent}/{oldMax} -> {newCurrent}/{newMax}");
+                    DragonEngine.Log($"Kiryu Balance Addon V2: enemy {uid} HP {oldCurrent}/{oldMax} -> {newCurrent}/{newMax}");
                 }
             }
             catch (Exception ex)
