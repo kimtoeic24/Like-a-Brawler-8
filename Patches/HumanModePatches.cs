@@ -140,7 +140,8 @@ namespace LikeABrawler2
                 return false;
             else
             {
-                
+                ApplyKiryuDamageMultiplier(battleDamageInfo);
+
                 bool result = m_damageExecValidTrampoline(humanModeManager, battleDamageInfo);
                 //TODO: Not make this poopshit
 
@@ -156,6 +157,28 @@ namespace LikeABrawler2
 
                 return result;
             }
+        }
+
+        private unsafe static void ApplyKiryuDamageMultiplier(IntPtr battleDamageInfo)
+        {
+            float multiplier = IniSettings.KiryuDamageMultiplier;
+            if (multiplier >= 0.999f)
+                return;
+
+            BattleDamageInfoSafe damageInfo = new BattleDamageInfoSafe(battleDamageInfo);
+            BrawlerPlayer attackerPlayer = Mod.GetPlayerByUID(damageInfo.Attacker.UID);
+
+            if (attackerPlayer == null || !attackerPlayer.IsKiryu())
+                return;
+
+            int* damage1 = (int*)(battleDamageInfo.ToInt64() + 0x120);
+            int* damage2 = (int*)(battleDamageInfo.ToInt64() + 0x124);
+
+            if (*damage1 > 0)
+                *damage1 = Math.Max(1, (int)MathF.Round(*damage1 * multiplier));
+
+            if (*damage2 > 0)
+                *damage2 = Math.Max(1, (int)MathF.Round(*damage2 * multiplier));
         }
     }
 }
