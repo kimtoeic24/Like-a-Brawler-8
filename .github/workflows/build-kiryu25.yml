@@ -1,0 +1,48 @@
+name: Build Kiryu Damage 25
+
+on:
+  push:
+    branches:
+      - kiryu-damage-25
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout LAB8
+        uses: actions/checkout@v4
+        with:
+          ref: kiryu-damage-25
+          path: Like-a-Brawler-8
+
+      - name: Checkout DragonEngine.NET dependency
+        uses: actions/checkout@v4
+        with:
+          repository: Fronkln/DragonEngine.NET
+          path: Y7Internal.NET
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build Like a Brawler 8
+        shell: pwsh
+        run: |
+          dotnet restore "Like-a-Brawler-8/Like a Brawler 8.csproj"
+          dotnet build "Like-a-Brawler-8/Like a Brawler 8.csproj" -c "Infinite Wealth Release" -p:Platform=x64 --no-restore
+
+      - name: Show build outputs
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse "Like-a-Brawler-8/bin" | Select-Object FullName,Length
+
+      - name: Upload LAB8 DLL
+        uses: actions/upload-artifact@v4
+        with:
+          name: Like-a-Brawler-8-Kiryu25
+          path: |
+            Like-a-Brawler-8/bin/**/*.dll
+            Like-a-Brawler-8/bin/**/*.pdb
+          if-no-files-found: error
