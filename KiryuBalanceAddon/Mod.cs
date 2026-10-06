@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
 
 namespace KiryuBalanceAddon
 {
@@ -46,7 +45,7 @@ namespace KiryuBalanceAddon
                 {
                     File.WriteAllText(SettingsPath,
                         "# Kiryu Balance Addon\r\n" +
-                        "# Only applies while Like A Brawler 8 reports realtime mode and the main player is Kiryu.\r\n" +
+                        "# Applies only when the current player is Kiryu. No LAB8 internal state is read.\r\n" +
                         "EnemyHpMultiplier=3.0\r\n");
                     EnemyHpMultiplier = 3.0f;
                     return;
@@ -62,7 +61,7 @@ namespace KiryuBalanceAddon
                     string value = line.Substring(line.IndexOf('=') + 1).Trim();
 
                     if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed))
-                        EnemyHpMultiplier = Math.Clamp(parsed, 1.0f, 30.0f);
+                        EnemyHpMultiplier = Math.Clamp(parsed, 1.0f, 100.0f);
                 }
             }
             catch (Exception ex)
@@ -72,29 +71,18 @@ namespace KiryuBalanceAddon
             }
         }
 
-        private static bool IsKiryuRealtime()
+        private static bool IsKiryu()
         {
             Fighter player = FighterManager.GetPlayer();
 
             if (!player.IsValid())
                 return false;
 
-            if (player.Character.Attributes.player_id != Player.ID.kiryu)
-                return false;
-
-            Assembly lab8Assembly = ModManager.GetModMainAssembly(Lab8ModName);
-            if (lab8Assembly == null)
-                return false;
-
-            Type lab8ModType = lab8Assembly.GetType(Lab8ModTypeName);
-            FieldInfo gamemodeField = lab8ModType?.GetField("Gamemode", BindingFlags.Public | BindingFlags.Static);
-
-            if (gamemodeField == null)
-                return false;
-
-            object value = gamemodeField.GetValue(null);
-            return value is int gamemode && gamemode == 1;
+            return player.Character.Attributes.player_id == Player.ID.kiryu;
         }
+
+        private static string AppliedLogPath =>
+            Path.Combine(Instance.ModPath, "kiryu_balance_applied.log");
 
         private static void Update()
         {
@@ -111,7 +99,7 @@ namespace KiryuBalanceAddon
                     return;
                 }
 
-                if (!IsKiryuRealtime())
+                if (!IsKiryu())
                     return;
 
                 foreach (Fighter enemy in enemies)
@@ -165,7 +153,9 @@ namespace KiryuBalanceAddon
                     status.SetHPMax(newMax);
                     status.CurrentHP = newCurrent;
 
-                    DragonEngine.Log($"Kiryu Balance Addon V2: enemy {uid} HP {oldCurrent}/{oldMax} -> {newCurrent}/{newMax}");
+                    string applied = $"[{DateTime.Now:HH:mm:ss}] enemy {uid}: HP {oldCurrent}/{oldMax} -> {newCurrent}/{newMax} ({EnemyHpMultiplier:0.##}x)";
+                    DragonEngine.Log("Kiryu Balance Addon V4: " + applied);
+                    File.AppendAllText(AppliedLogPath, applied + Environment.NewLine);
                 }
             }
             catch (Exception ex)
